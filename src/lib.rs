@@ -197,18 +197,20 @@ pub extern "C" fn loop_once(rust_state: *mut RustState) -> u8 {
 
     if rust_state.h710.is_ready() {
         let val = rust_state.h710.read();
-        let res = rust_state.history.add(
-            val,
-            rust_state.rtc.get_time_ms() as u32,
-            &mut rust_state.state,
-        );
-        info!("V:{}, A:{}", val, rust_state.history.get_area());
-        match res {
-            HistoryResult::Stop => {
-                rust_state.state.stop_stim();
-            }
-            HistoryResult::Resume => {
-                rust_state.state.start_stim();
+        if let Some(val) = val {
+            let res = rust_state.history.add(
+                val,
+                rust_state.rtc.get_time_ms() as u32,
+                &mut rust_state.state,
+            );
+            info!("V:{}, A:{}", val, rust_state.history.get_area());
+            match res {
+                HistoryResult::Stop => {
+                    rust_state.state.stop_stim();
+                }
+                HistoryResult::Resume => {
+                    rust_state.state.start_stim();
+                }
             }
         }
     }

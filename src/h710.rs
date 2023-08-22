@@ -37,17 +37,27 @@ where
         h710
     }
 
-    pub fn read(&mut self) -> u32 {
+    pub fn read(&mut self) -> Option<u32> {
         while self.in_pin.is_high().unwrap_or_default() {}
         let mut value = 0u32;
-        for _ in 0..24u8 {
+        let mut last_zero_index = 0;
+        for i in 0..24u8 {
             self.pulse();
             // info!("{}", value);
-            value = (value << 1) | self.int_value() as u32;
+            let pin = self.int_value();
+            if pin == 0 {
+                last_zero_index = i;
+            }
+            value = (value << 1) | pin as u32;
         }
         self.next_measurement();
 
-        value ^ 0x800000
+        // Sometimes the pin is stuck high, ignore those results
+        if last_zero_index < 11 {
+            None
+        } else {
+            Some(value ^ 0x800000)
+        }
     }
 
     pub fn is_ready(&self) -> bool {
