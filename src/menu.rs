@@ -23,28 +23,19 @@ impl Default for MenuPosition {
 
 pub struct Menu {
     pub position: MenuPosition,
-    changed: bool,
 }
 
 impl Default for Menu {
     fn default() -> Self {
         Menu {
             position: MenuPosition::default(),
-            changed: true,
         }
     }
 }
 
 impl Menu {
-    pub fn has_changed(&mut self) -> bool {
-        let val = self.changed;
-        self.changed = false;
-        val
-    }
-
     pub fn backward(&mut self, state: &mut State) {
         use MenuPosition::*;
-        self.changed = true;
         self.position = match self.position {
             Main => Intensity,
             Peak => Main,
@@ -76,7 +67,6 @@ impl Menu {
     }
     pub fn foward(&mut self, state: &mut State) {
         use MenuPosition::*;
-        self.changed = true;
         self.position = match self.position {
             Main => Peak,
             Peak => Area,
@@ -108,7 +98,6 @@ impl Menu {
     }
     pub fn click(&mut self, state: &mut State) {
         use MenuPosition::*;
-        self.changed = true;
         self.position = match self.position {
             Main => {
                 state.toggle();

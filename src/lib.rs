@@ -61,7 +61,7 @@ pub struct RustState<'a> {
     state: Box<State>,
     display: Box<OLEDDisplay<ssd1306::prelude::I2CInterface<I2C<'a, hal::peripherals::I2C0>>>>,
     encoder_sw: Box<DebouncedSwitch<hal::gpio::GpioPin<hal::gpio::Input<hal::gpio::PullUp>, 5>>>,
-    history: Box<history::History<4>>,
+    history: Box<history::Nogasm<4>>,
     h710: Box<
         h710::H710<
             hal::gpio::GpioPin<hal::gpio::Input<hal::gpio::PullUp>, 16>,
@@ -128,7 +128,7 @@ pub extern "C" fn rs_init<'a>() -> RustState<'a> {
     let sensor_clock = io.pins.gpio17.into_push_pull_output();
     let h710 = h710::H710::new(sensor_data, sensor_clock, delay, h710::Mode::HZ40);
 
-    let history = history::History::<4>::new();
+    let history = history::Nogasm::<4>::new();
 
     // let mut timer00 = timer_group0.timer0;
     // hal::interrupt::enable(
@@ -160,6 +160,8 @@ pub extern "C" fn rs_init<'a>() -> RustState<'a> {
 #[no_mangle]
 pub extern "C" fn loop_once(rust_state: *mut RustState) -> u8 {
     let rust_state = unsafe { rust_state.as_mut().unwrap() };
+
+    /* Read user input */
     critical_section::with(|cs| {
         match ENCODER_DIRECTION.borrow(cs).get() {
             rotary_encoder_embedded::Direction::Clockwise => {
@@ -179,22 +181,24 @@ pub extern "C" fn loop_once(rust_state: *mut RustState) -> u8 {
         rust_state.menu.click(&mut rust_state.state);
     }
 
+    /* Check bluetooth */
     rust_state.state.set_ble_connected(ble_is_connected());
     rust_state.state.set_ble_name(ble_get_name());
+
+    /* get current time */
     rust_state.state.cur_time_ms = rust_state.rtc.get_time_ms() as u32;
 
-    if rust_state.menu.has_changed() || rust_state.state.has_changed() {
-        // let now = rust_state.rtc.get_time_ms();
-        rust_state
-            .display
-            .update(&rust_state.menu, &rust_state.state);
-        // info!("Took {}ms", rust_state.rtc.get_time_ms() - now);
-    }
+    /* Update display (only updates if necessary) */
+    rust_state
+        .display
+        .update(&rust_state.menu, &rust_state.state);
 
+    /* If not running, let manual override work */
     if !rust_state.state.running {
         return rust_state.state.get_cur_intensity();
     }
 
+    /* If running, read sensor and update if necessary */
     if rust_state.h710.is_ready() {
         let val = rust_state.h710.read();
         if let Some(val) = val {

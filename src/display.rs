@@ -27,9 +27,11 @@ const UNDERLINED_TEXT_STYLE: MonoTextStyle<'_, BinaryColor> = MonoTextStyleBuild
 
 const FIRST_ROW: Point = Point::new(5, 0);
 const SECOND_ROW: Point = Point::new(5, 14);
+const INTER_FRAME_TIME_MS: u32 = 50;
 
 pub struct OLEDDisplay<DI> {
     display: Ssd1306<DI, DisplaySize128x32, BufferedGraphicsMode<DisplaySize128x32>>,
+    next_update_ms: u32,
 }
 
 impl<DI> OLEDDisplay<DI>
@@ -43,7 +45,10 @@ where
             .into_buffered_graphics_mode();
         display.init().unwrap();
 
-        OLEDDisplay { display }
+        OLEDDisplay {
+            display,
+            next_update_ms: 0,
+        }
     }
 
     fn print_text(&mut self, position: Point, text: &str, underlined: bool) {
@@ -108,7 +113,13 @@ where
         let stim_str = if !state.running {
             "Ready\n"
         } else if state.stimulating {
-            "Stimulation\n"
+            write!(
+                &mut text,
+                "Stimulation\n{:.1}s",
+                (state.cur_time_ms - state.stim_start_time) as f32 / 1000f32
+            )
+            .unwrap();
+            text.as_str()
         } else {
             write!(
                 &mut text,
@@ -155,6 +166,12 @@ where
     }
 
     pub fn update(&mut self, menu: &menu::Menu, state: &state::State) {
+        if self.next_update_ms > state.cur_time_ms {
+            return;
+        }
+
+        self.next_update_ms = state.cur_time_ms + INTER_FRAME_TIME_MS;
+
         use menu::MenuPosition::*;
         self.display.clear_buffer();
         match menu.position {

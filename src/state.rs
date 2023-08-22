@@ -30,7 +30,6 @@ impl Hysteresis {
 }
 
 pub struct State {
-    changed: bool,
     pub ble_connected: bool,
     pub ble_name: &'static str,
     pub running: bool,
@@ -41,13 +40,13 @@ pub struct State {
     pub cooldown_time: u32,
     pub intensity: u8,
     pub hysteresis: Hysteresis,
+    pub stim_start_time: u32,
     pub cur_time_ms: u32,
 }
 
 impl State {
     pub fn new() -> State {
         State {
-            changed: true,
             ble_connected: false,
             ble_name: "n/a",
             running: false,
@@ -58,13 +57,9 @@ impl State {
             cooldown_time: 10_000,
             intensity: 10,
             hysteresis: Hysteresis::new(),
+            stim_start_time: 0,
             cur_time_ms: 0,
         }
-    }
-    pub fn has_changed(&mut self) -> bool {
-        let changed = self.changed;
-        self.changed = false;
-        changed || (self.running && !self.stimulating)
     }
 
     pub fn set_ble_connected(&mut self, connected: bool) {
@@ -72,7 +67,6 @@ impl State {
             return;
         }
         self.ble_connected = connected;
-        self.changed = true;
     }
 
     pub fn set_ble_name(&mut self, name: &'static str) {
@@ -80,7 +74,6 @@ impl State {
             return;
         }
         self.ble_name = name;
-        self.changed = true;
     }
 
     pub fn area_up(&mut self) {
@@ -125,14 +118,13 @@ impl State {
             return;
         }
         self.stimulating = false;
-        self.changed = true;
     }
     pub fn start_stim(&mut self) {
         if self.stimulating {
             return;
         }
         self.stimulating = true;
-        self.changed = true;
+        self.stim_start_time = self.cur_time_ms;
     }
     pub fn stop_stim_manual(&mut self) {
         if !self.running {

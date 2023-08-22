@@ -20,16 +20,16 @@ pub enum HistoryResult {
     Resume,
 }
 
-pub struct History<const SAMPLES: usize> {
-    avg: RunningAverage<SAMPLES>,
+pub struct Nogasm<const AVG_SAMPLES: usize> {
+    avg: RunningAverage<AVG_SAMPLES>,
     pub min: u32,
     pub min_decay: u32,
     state: PeakState,
 }
 
-impl<const SAMPLES: usize> History<{ SAMPLES }> {
-    pub fn new() -> History<SAMPLES> {
-        History {
+impl<const AVG_SAMPLES: usize> Nogasm<{ AVG_SAMPLES }> {
+    pub fn new() -> Nogasm<AVG_SAMPLES> {
+        Nogasm {
             avg: RunningAverage::new(),
             min: u32::MAX,
             min_decay: u32::MAX,
